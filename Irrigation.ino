@@ -4,7 +4,6 @@
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
-#include <TimerObject.h>
     
 MDNSResponder mdns;
 
@@ -16,10 +15,7 @@ HTTPClient http;
 
 const int NUMBER_OF_ZONES = 4;
 int zoneOutputPins[] = {0, 1, 3, 4};
-const char* host="http://192.168.0.109/JSON";
-
-
-TimerObject *timer1 = new TimerObject(1000 * 60 * 10);
+const char* homeSeerHost="http://192.168.0.109/JSON";
 
 void setup(void) {
    resetPins();
@@ -45,47 +41,26 @@ void setup(void) {
 
    //Routes
    server.on("/", [](){
-      sendStatusMessage(200, "System status: Ok");
+      sendStatusMessage(200, "Ok");
    });
-
    server.on("/water", handleValve);
    server.onNotFound(handleNotFound);
 
    server.begin();
    Serial.println("HTTP server started");
-   sendPing();
-   timer1->setOnTimer(&sendPing);
-   timer1->Start();
 }
 
 void handleNotFound() {
-    sendStatusMessage(400, "Could not find page");
+    sendStatusMessage(400, "Not found");
 }
 
 void sendStatusMessage(int httpCode, String messageText) {
     String status;
-    StaticJsonBuffer<200> jsonBuffer;
+    StaticJsonBuffer<100> jsonBuffer;
     JsonObject& statusMessage = jsonBuffer.createObject();
     statusMessage["status"] = messageText;
     statusMessage.prettyPrintTo(status);
     server.send(httpCode, "application/json", status);
-}
-
-void sendPing() {
-    http.begin(host);
-    http.addHeader("Content-Type", "application/json");
-    int httpCode = http.POST("{'action' : 'controlbyvalue', 'deviceref' : '277', 'value' : '100'}");
-    if(httpCode > 0) {
-        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-        if(httpCode == HTTP_CODE_OK) {
-            String payload = http.getString();
-            Serial.println(payload);
-        }
-    }
-    else {
-        Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
-    }
-    http.end();
 }
 
 bool isValidValve(String valve) {
@@ -119,7 +94,7 @@ void handleValve() {
     String valveId = jObject["valveId"];
     String valveCommand = jObject["command"];
     if(!isValidValveCommand(valveCommand) || !isValidValve(valveId))
-        sendStatusMessage(404, "This is not a valid command");
+        sendStatusMessage(404, "Not a valid command");
     resetPins();
     digitalWrite(zoneOutputPins[valveId.toInt() - 1], valveCommand.toInt());
     Serial.println("");
@@ -138,5 +113,4 @@ void handleValve() {
  
 void loop(void) {
     server.handleClient();
-    timer1->Update();
 }
