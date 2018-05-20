@@ -7,15 +7,16 @@
     
 MDNSResponder mdns;
 
-const char* ssid = "satin2_2_4_GHz";
-const char* password = "Henrik123";
+const char* ssid = "[Your network id]";
+const char* password = "[Password to your wifi]";
 
 ESP8266WebServer server(80);
-HTTPClient http;
 
 const int NUMBER_OF_ZONES = 4;
-int zoneOutputPins[] = {0, 1, 3, 4};
-const char* homeSeerHost="http://192.168.0.109/JSON";
+// NB! These are the GPIO pins of the ESP8266, not the pin numbers on the WeMo D1
+// Mapping available at https://github.com/esp8266/Arduino/blob/master/variants/d1_mini/pins_arduino.h#L49-L61
+int zoneOutputPins[] = {14, 12, 13, 15}; //D5, D6, D7, D8
+const char* homeSeerHost="http://[ip address to your homeseer installation]/JSON";
 
 void setup(void) {
    resetPins();
@@ -51,7 +52,7 @@ void setup(void) {
 }
 
 void handleNotFound() {
-    sendStatusMessage(400, "Not found");
+    sendStatusMessage(404, "Not found");
 }
 
 void sendStatusMessage(int httpCode, String messageText) {
@@ -93,8 +94,10 @@ void handleValve() {
 
     String valveId = jObject["valveId"];
     String valveCommand = jObject["command"];
-    if(!isValidValveCommand(valveCommand) || !isValidValve(valveId))
-        sendStatusMessage(404, "Not a valid command");
+    if(!isValidValveCommand(valveCommand) || !isValidValve(valveId)) {
+        sendStatusMessage(400, "Not a valid command");
+        return;
+    }
     resetPins();
     digitalWrite(zoneOutputPins[valveId.toInt() - 1], valveCommand.toInt());
     Serial.println("");
