@@ -44,7 +44,7 @@ void setup(void) {
    server.on("/", [](){
       sendStatusMessage(200, "Ok");
    });
-   server.on("/water", handleValve);
+   server.on("/valve", handleValve);
    server.onNotFound(handleNotFound);
 
    server.begin();
